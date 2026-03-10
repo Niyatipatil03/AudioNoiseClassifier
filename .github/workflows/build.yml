@@ -27,8 +27,7 @@ jobs:
       - name: Inject Microphone Permissions
         # This step automatically adds the required permissions to the generated file
         run: |
-          sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO"
-          />\n    <uses-permission android:name="android.permission.INTERNET" />'
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO" <uses-permission android:name="android.permission.INTERNET" />'
           android/app/src/main/AndroidManifest.xml
    
       - name: Install Dependencies
