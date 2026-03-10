@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
@@ -29,7 +28,8 @@ class OfflinePredictor extends StatefulWidget {
 }
 
 class _OfflinePredictorState extends State<OfflinePredictor> {
-  final record = AudioRecorder();
+  // Changed from AudioRecorder() to Record() for compatibility
+  final record = Record();
   Interpreter? _interpreter;
   bool isRecording = false;
   bool isProcessing = false;
@@ -45,7 +45,6 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
   Future<void> _loadModel() async {
     try {
       _interpreter = await Interpreter.fromAsset('assets/model.tflite');
-      debugPrint("Model loaded successfully");
     } catch (e) {
       setState(() => resultText = "Error loading AI model: $e");
     }
@@ -58,12 +57,11 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
     final directory = await getTemporaryDirectory();
     final path = '${directory.path}/offline_test.wav';
 
+    // Updated start method for record version 5+
     await record.start(
-      const RecordConfig(
-        encoder: AudioEncoder.wav,
-        sampleRate: 22050,
-      ),
       path: path,
+      encoder: AudioEncoder.wav,
+      samplingRate: 22050,
     );
 
     setState(() {
@@ -76,7 +74,6 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
   Future<void> stopAndAnalyze() async {
     final path = await record.stop();
     setState(() => isRecording = false);
-
     if (path == null || _interpreter == null) return;
 
     _runInference(path);
@@ -93,7 +90,7 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
       final file = File(path);
       final bytes = await file.readAsBytes();
 
-      // Input shape: [1, 1, 128, 64]
+      // Fixed input/output shapes for the CNN
       var input = List.generate(
         1,
         (i) => List.generate(
@@ -105,8 +102,7 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
         ),
       );
 
-      // Output shape: [1, 2]
-      var output = List.filled(2, 0.0).reshape([1, 2]);
+      var output = List.filled(1 * 2, 0.0).reshape([1, 2]);
 
       _interpreter!.run(input, output);
 
@@ -157,10 +153,9 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
               child: Text(
                 resultText,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: statusColor,
                 ),
               ),
             ),
@@ -173,8 +168,7 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
                 onLongPressUp: stopAndAnalyze,
                 child: FloatingActionButton.large(
                   onPressed: () {},
-                  backgroundColor:
-                      isRecording ? Colors.red : Colors.deepPurple,
+                  backgroundColor: isRecording ? Colors.red : Colors.deepPurple,
                   child: Icon(
                     isRecording ? Icons.stop : Icons.mic,
                     size: 50,
