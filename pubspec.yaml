@@ -10,10 +10,14 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # AI engine for the phone
   tflite_flutter: ^0.10.1
   record: ^6.0.0
   path_provider: ^2.1.1
-  permission_handler: ^12.0.0
+
+  # Downgraded from ^12.0.0 to fix SDK conflict
+  permission_handler: ^11.0.1
+
   fftea: ^1.5.0
 
 dev_dependencies:
