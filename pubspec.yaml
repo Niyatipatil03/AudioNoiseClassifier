@@ -1,23 +1,18 @@
 name: audio_noise_classifier
-description: A Flutter app to classify audio noise.
+description: Offline AI Noise Classifier.
 publish_to: 'none'
 version: 1.0.0+1
-
 environment:
     sdk: '>=3.0.0 <4.0.0'
-    
 dependencies:
     flutter:
-        sdk: flutter
-    http: ^1.1.0
-     # Updated from ^5.0.0 to ^6.0.0 to fix the build error
-    record: ^6.0.0
-    path_provider: ^2.1.1
-    permission_handler: ^12.0.0
-   
-dev_dependencies:
-    flutter_test:
-        sdk: flutter
-   
+         sdk: flutter
+      # Library to run AI on phone
+onnxruntime_flutter: ^0.1.0
+record: ^6.0.0
+path_provider: ^2.1.1
+permission_handler: ^12.0.0
 flutter:
     uses-material-design: true
+assets:
+    - assets/model.onnx
