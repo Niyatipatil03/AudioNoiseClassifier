@@ -17,8 +17,10 @@ jobs:
 
       - name: Install AI Conversion Tools
         run: |
+        
+            pip install --upgrade typing_extensions
             pip install torch torchvision
-             
+              
             pip install onnx==1.14.1
             pip install tensorflow==2.13.0
             pip install tensorflow-probability==0.21.0
