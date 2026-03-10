@@ -40,10 +40,10 @@ jobs:
 
       - name: Create Project and Assets
         run: |
-          rm -rf android
-          flutter create . --platforms=android
-          mkdir -p assets
-          mv model.tflite assets/model.tflite
+            rm -rf android
+            flutter create --project-name=audio_noise_classifier --platforms=android .
+            mkdir -p assets
+            mv model.tflite assets/model.tflite
 
       - name: Add Permissions
         run: python add_perms.py
