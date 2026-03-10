@@ -1,4 +1,5 @@
 name: Flutter Offline Build
+
 on: [push]
 
 jobs:
@@ -14,7 +15,7 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install AI Conversion Tools
+      - name: Install AI Tools
         run: |
           pip install --no-cache-dir typing_extensions==4.10.0
           pip install --no-cache-dir torch==2.1.2 torchvision==0.16.2
@@ -23,10 +24,10 @@ jobs:
           pip install tensorflow-probability==0.21.0
           pip install git+https://github.com/onnx/onnx-tensorflow.git
 
-      - name: Convert Model to TFLite
+      - name: Convert Model
         run: python convert_model.py
 
-      - name: Set up Java 17
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -37,21 +38,22 @@ jobs:
         with:
           flutter-version: '3.16.9'
 
-      - name: Create Project and Assets
+      - name: Create Project
         run: |
-            rm -rf android
-            flutter create --project-name=audio_noise_classifier --platforms=android .
-            mkdir -p assets
-            mv model.tflite assets/model.tflite
+          rm -rf android
+          # Create fresh Flutter Android project
+          flutter create --project-name=audio_noise_classifier --platforms=android .
+          mkdir -p assets
+          # Move converted TFLite model into assets
+          cp model.tflite assets/model.tflite
 
       - name: Add Permissions
         run: python add_perms.py
 
-      - name: Install Dependencies
-        run: flutter pub get
-
       - name: Build APK
-        run: flutter build apk --release
+        run: |
+          flutter pub get
+          flutter build apk --release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
