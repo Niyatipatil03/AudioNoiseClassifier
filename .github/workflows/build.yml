@@ -30,11 +30,11 @@ jobs:
             import os
             path = 'android/app/src/main/AndroidManifest.xml'
             with open(path, 'r') as f:
-            content = f.read()
-            perms = '    <uses-permission android:name=\"android.permission.RECORD_AUDIO\" />\n <uses-permission android:name=\"android.permission.INTERNET\" />\n'
-            new_content = content.replace('<application', perms + '    <application')
-            with open(path, 'w') as f:
-            f.write(new_content)
+              content = f.read()
+              perms = '    <uses-permission android:name=\"android.permission.RECORD_AUDIO\" />\n <uses-permission android:name=\"android.permission.INTERNET\" />\n'
+              new_content = content.replace('<application', perms + '    <application')
+              with open(path, 'w') as f:
+                f.write(new_content)
               "
    
         - name: Install Dependencies
