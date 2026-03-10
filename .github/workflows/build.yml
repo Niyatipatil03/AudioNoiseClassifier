@@ -1,57 +1,57 @@
 name: Flutter Offline Build
+
 on: [push]
-    
+
 jobs:
-    build:
-        runs-on: ubuntu-latest
-        steps:
-        - name: Checkout Code
-          uses: actions/checkout@v4
-   
-        - name: Set up Python
-          uses: actions/setup-python@v4
-          with:
-              python-version: '3.10'
-   
-        - name: Install AI Conversion Tools
-          run: |
-              pip install torch torchvision onnx
-   
-        - name: Convert Model to Mobile Format
-          run: python convert_model.py
-   
-        - name: Set up Java 17
-          uses: actions/setup-java@v4
-          with:
-              distribution: 'temurin'
-              java-version: '17'
-   
-        - name: Set up Flutter
-          uses: subosito/flutter-action@v2
-          with:
-              channel: 'stable'
-   
-        - name: Create Project and Assets
-          run: |
-              rm -rf android
-              flutter create . --platforms=android
-              mkdir -p assets
-              # We use the ONNX model for now as it's easier to run in Flutter
-              mv model.onnx assets/model.onnx
-   
-        - name: Add Permissions
-          run: |
-              sed -i 's/<application/    <uses-permission android:name="android.permission.RECORD_AUDIO"\/>\n    <uses-permission android:name="android.permission.INTERNET" \/>\n    <application/'
-              android/app/src/main/AndroidManifest.xml
-   
-        - name: Install Dependencies
-          run: flutter pub get
-   
-        - name: Build APK
-          run: flutter build apk --release
-   
-        - name: Upload APK
-          uses: actions/upload-artifact@v4
-          with:
-              name: offline-apk
-              path: build/app/outputs/flutter-apk/app-release.apk
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install AI Conversion Tools
+        run: |
+          pip install torch torchvision onnx onnx-tf tensorflow
+
+      - name: Convert Model to TFLite
+        run: python convert_model.py
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Create Project and Assets
+        run: |
+          rm -rf android
+          flutter create . --platforms=android
+          mkdir -p assets
+          mv model.tflite assets/model.tflite
+
+      - name: Add Permissions
+        run: |
+          python3 -c "path = 'android/app/src/main/AndroidManifest.xml' with open(path, 'r') as f: content = f.read() perms = '    <uses-permission android:name=\"android.permission.RECORD_AUDIO\" />\n    <uses-permission android:name=\"android.permission.INTERNET\" />\n' new_content = content.replace('<application', perms + '    <application') with open(path, 'w') as f: f.write(new_content)"
+
+      - name: Install Dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: offline-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
