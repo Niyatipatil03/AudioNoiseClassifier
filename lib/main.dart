@@ -28,11 +28,12 @@ class OfflinePredictor extends StatefulWidget {
 }
 
 class _OfflinePredictorState extends State<OfflinePredictor> {
-  // Changed from AudioRecorder() to Record() for compatibility
-  final record = Record();
+  // Use AudioRecorder() for version 5.0.5
+  final record = AudioRecorder();
   Interpreter? _interpreter;
   bool isRecording = false;
   bool isProcessing = false;
+
   String resultText = "Offline AI Ready\n(No Wi-Fi needed)";
   Color statusColor = Colors.deepPurple;
 
@@ -57,11 +58,13 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
     final directory = await getTemporaryDirectory();
     final path = '${directory.path}/offline_test.wav';
 
-    // Updated start method for record version 5+
+    // Updated syntax for record version 5.0.5
     await record.start(
+      const RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 22050,
+      ),
       path: path,
-      encoder: AudioEncoder.wav,
-      samplingRate: 22050,
     );
 
     setState(() {
@@ -74,6 +77,7 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
   Future<void> stopAndAnalyze() async {
     final path = await record.stop();
     setState(() => isRecording = false);
+
     if (path == null || _interpreter == null) return;
 
     _runInference(path);
@@ -90,19 +94,19 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
       final file = File(path);
       final bytes = await file.readAsBytes();
 
-      // Fixed input/output shapes for the CNN
+      // CNN expects [1, 1, 128, 64]
       var input = List.generate(
         1,
-        (i) => List.generate(
+        (_) => List.generate(
           1,
-          (j) => List.generate(
+          (_) => List.generate(
             128,
-            (k) => List.filled(64, 0.0),
+            (_) => List.filled(64, 0.0),
           ),
         ),
       );
 
-      var output = List.filled(1 * 2, 0.0).reshape([1, 2]);
+      var output = List.filled(2, 0.0).reshape([1, 2]);
 
       _interpreter!.run(input, output);
 
@@ -131,7 +135,10 @@ class _OfflinePredictorState extends State<OfflinePredictor> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Offline Noise AI"), centerTitle: true),
+      appBar: AppBar(
+        title: const Text("Offline Noise AI"),
+        centerTitle: true,
+      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
