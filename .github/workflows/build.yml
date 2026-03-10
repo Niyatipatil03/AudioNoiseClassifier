@@ -17,8 +17,12 @@ jobs:
 
       - name: Install AI Conversion Tools
         run: |
-           pip install torch torchvision onnx tensorflow
-           pip install git+https://github.com/onnx/onnx-tensorflow.git
+            pip install torch torchvision
+             
+            pip install onnx==1.14.1
+            pip install tensorflow==2.13.0
+            pip install tensorflow-probability==0.21.0
+            pip install git+https://github.com/onnx/onnx-tensorflow.git
 
       - name: Convert Model to TFLite
         run: python convert_model.py
