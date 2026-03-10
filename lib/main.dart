@@ -1,137 +1,198 @@
-import 'dart:convert';
-      import 'package:flutter/material.dart';
-      import 'package:http/http.dart' as http;
-      import 'package:record/record.dart';
-      import 'package:path_provider/path_provider.dart';
-      import 'package:permission_handler/permission_handler.dart';
-     
-      void main() => runApp(const AudioApp());
-     
-     class AudioApp extends StatelessWidget {
-       const AudioApp({super.key});
-       @override
-       Widget build(BuildContext context) {
-         return MaterialApp(
-           debugShowCheckedModeBanner: false,
-           theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
-           home: const AudioPredictor(),
-         );
-       }
-     }
-    
-     class AudioPredictor extends StatefulWidget {
-       const AudioPredictor({super.key});
-       @override
-       State<AudioPredictor> createState() => _AudioPredictorState();
-     }
-    
-     class _AudioPredictorState extends State<AudioPredictor> {
-       final record = AudioRecorder();
-       bool isRecording = false;
-       bool isProcessing = false;
-       String resultText = "Ready to analyze noise";
-       Color statusColor = Colors.blueGrey;
-    
-       // Using your PC's IP address
-       final String baseUrl = "http://10.3.17.101:8000";
-    
-       Future<void> startRecording() async {
-         final status = await Permission.microphone.request();
-         if (status != PermissionStatus.granted) {
-           setState(() => resultText = "Microphone permission denied");
-           return;
-         }
-    
-         final directory = await getTemporaryDirectory();
-         final path = '${directory.path}/test_audio.wav';
-    
-         await record.start(const RecordConfig(encoder: AudioEncoder.wav), path: path);
-         setState(() {
-           isRecording = true;
-           resultText = "Recording audio...";
-           statusColor = Colors.red;
-         });
-       }
-    
-       Future<void> stopAndUpload() async {
-         final path = await record.stop();
-         setState(() => isRecording = false);
-         if (path == null) return;
-         uploadAudio(path);
-       }
-    
-       Future<void> uploadAudio(String path) async {
-         setState(() {
-           isProcessing = true;
-           resultText = "Sending to AI Server...";
-           statusColor = Colors.orange;
-         });
-    
-         try {
-           var request = http.MultipartRequest('POST', Uri.parse('$baseUrl/predict'));
-           request.files.add(await http.MultipartFile.fromPath('file', path));
-    
-           var streamedResponse = await request.send();
-           var response = await http.Response.fromStream(streamedResponse);
-    
-           if (response.statusCode == 200) {
-             final data = jsonDecode(response.body);
-             setState(() {
-               final res = data['result'];
-               resultText = "FINAL RESULT: $res\n"
-                            "Noise Ratio: ${(data['noise_ratio'] * 100).toStringAsFixed(1)}%\n"
-                            "Confidence: ${(data['confidence'] * 100).toStringAsFixed(1)}%";
-               statusColor = res == "OK" ? Colors.green : Colors.red;
-             });
-           } else {
-             setState(() {
-               resultText = "Server Error: ${response.statusCode}";
-               statusColor = Colors.black;
-             });
-           }
-         } catch (e) {
-           setState(() {
-             resultText = "Connection Error!\nCheck if PC is running backend\nand phone is on same Wi-Fi.";
-             statusColor = Colors.black;
-           });
-         } finally {
-           setState(() => isProcessing = false);
-         }
-      }
-   
-      @override
-      Widget build(BuildContext context) {
-        return Scaffold(
-          appBar: AppBar(title: const Text("Noise AI Classifier"), centerTitle: true),
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(isRecording ? Icons.mic : Icons.multitrack_audio, size: 80, color: statusColor),
-                const SizedBox(height: 20),
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  margin: const EdgeInsets.symmetric(horizontal: 30),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    border: Border.all(color: statusColor),
-                    borderRadius: BorderRadius.circular(15),
-                  ),
-                  child: Text(resultText, textAlign: TextAlign.center,
-                              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: statusColor)),
-                ),
-                const SizedBox(height: 40),
-                if (isProcessing)
-                  const CircularProgressIndicator()
-                else
-                  FloatingActionButton.large(
-                    onPressed: isRecording ? stopAndUpload : startRecording,
-                    backgroundColor: isRecording ? Colors.red : Colors.blue,
-                    child: Icon(isRecording ? Icons.stop : Icons.mic, color: Colors.white, size: 40),
-                  ),
-              ],
-            ),
-          ),
-        );
-      }
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:record/record.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
+
+void main() => runApp(const OfflineAudioApp());
+
+class OfflineAudioApp extends StatelessWidget {
+  const OfflineAudioApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.deepPurple),
+      home: const OfflinePredictor(),
+    );
+  }
+}
+
+class OfflinePredictor extends StatefulWidget {
+  const OfflinePredictor({super.key});
+
+  @override
+  State<OfflinePredictor> createState() => _OfflinePredictorState();
+}
+
+class _OfflinePredictorState extends State<OfflinePredictor> {
+  final record = AudioRecorder();
+  Interpreter? _interpreter;
+  bool isRecording = false;
+  bool isProcessing = false;
+  String resultText = "Offline AI Ready\n(No Wi-Fi needed)";
+  Color statusColor = Colors.deepPurple;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadModel();
+  }
+
+  Future<void> _loadModel() async {
+    try {
+      _interpreter = await Interpreter.fromAsset('assets/model.tflite');
+      debugPrint("Model loaded successfully");
+    } catch (e) {
+      setState(() => resultText = "Error loading AI model: $e");
     }
+  }
+
+  Future<void> startRecording() async {
+    final status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted) return;
+
+    final directory = await getTemporaryDirectory();
+    final path = '${directory.path}/offline_test.wav';
+
+    await record.start(
+      const RecordConfig(
+        encoder: AudioEncoder.wav,
+        sampleRate: 22050,
+      ),
+      path: path,
+    );
+
+    setState(() {
+      isRecording = true;
+      resultText = "Listening for noise...";
+      statusColor = Colors.red;
+    });
+  }
+
+  Future<void> stopAndAnalyze() async {
+    final path = await record.stop();
+    setState(() => isRecording = false);
+
+    if (path == null || _interpreter == null) return;
+
+    _runInference(path);
+  }
+
+  Future<void> _runInference(String path) async {
+    setState(() {
+      isProcessing = true;
+      resultText = "AI is thinking...";
+      statusColor = Colors.orange;
+    });
+
+    try {
+      final file = File(path);
+      final bytes = await file.readAsBytes();
+
+      // Input shape: [1, 1, 128, 64]
+      var input = List.generate(
+        1,
+        (i) => List.generate(
+          1,
+          (j) => List.generate(
+            128,
+            (k) => List.filled(64, 0.0),
+          ),
+        ),
+      );
+
+      // Output shape: [1, 2]
+      var output = List.filled(2, 0.0).reshape([1, 2]);
+
+      _interpreter!.run(input, output);
+
+      double probOk = output[0][0];
+      double probNotOk = output[0][1];
+
+      setState(() {
+        if (probNotOk > probOk) {
+          resultText = "RESULT: NOT OK\nDetected Noise Patterns";
+          statusColor = Colors.red;
+        } else {
+          resultText = "RESULT: OK\nClean Signal";
+          statusColor = Colors.green;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        resultText = "Processing Error: $e";
+        statusColor = Colors.black;
+      });
+    } finally {
+      setState(() => isProcessing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Offline Noise AI"), centerTitle: true),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isRecording ? Icons.settings_voice : Icons.offline_bolt,
+              size: 100,
+              color: statusColor,
+            ),
+            const SizedBox(height: 30),
+            Container(
+              padding: const EdgeInsets.all(25),
+              margin: const EdgeInsets.symmetric(horizontal: 30),
+              decoration: BoxDecoration(
+                color: statusColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: statusColor, width: 2),
+              ),
+              child: Text(
+                resultText,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: statusColor,
+                ),
+              ),
+            ),
+            const SizedBox(height: 50),
+            if (isProcessing)
+              const CircularProgressIndicator()
+            else
+              GestureDetector(
+                onLongPress: startRecording,
+                onLongPressUp: stopAndAnalyze,
+                child: FloatingActionButton.large(
+                  onPressed: () {},
+                  backgroundColor:
+                      isRecording ? Colors.red : Colors.deepPurple,
+                  child: Icon(
+                    isRecording ? Icons.stop : Icons.mic,
+                    size: 50,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 10),
+            Text(
+              isRecording ? "RELEASE TO ANALYZE" : "HOLD TO RECORD",
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
