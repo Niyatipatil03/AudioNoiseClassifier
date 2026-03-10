@@ -1,35 +1,44 @@
 name: Flutter Build APK
 on: [push]
-
+    
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-     - name: Checkout Code
-       uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
    
-     - name: Set up Java 17
-       uses: actions/setup-java@v4
-       with:
-         distribution: 'temurin'
-         java-version: '17'
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
    
-     - name: Set up Flutter
-       uses: subosito/flutter-action@v2
-       with:
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
           channel: 'stable'
    
-     - name: Fix Project Structure
-       # Removed --force to fix the error
-       run: flutter create . --platforms=android
+      - name: Clean and Recreate Android Project
+        run: |
+          rm -rf android
+          flutter create . --platforms=android
    
-     - name: Install Dependencies
-       run: flutter pub get
+      - name: Inject Microphone Permissions
+        # This step automatically adds the required permissions to the generated file
+        run: |
+          sed -i '/<application/i \    <uses-permission android:name="android.permission.RECORD_AUDIO"
+          />\n    <uses-permission android:name="android.permission.INTERNET" />'
+          android/app/src/main/AndroidManifest.xml
    
-     - name: Build APK
-       run: flutter build apk --release
+      - name: Install Dependencies
+        run: flutter pub get
    
-     - name: Upload APK
-       uses: actions/upload-artifact@v4
-       with:
-         name: release-apk
+      - name: Build APK
+        run: flutter build apk --release
+   
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
