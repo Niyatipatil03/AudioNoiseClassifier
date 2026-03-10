@@ -13,7 +13,7 @@ if os.path.exists(manifest_path):
     <uses-permission android:name="android.permission.INTERNET" />
     """
 
-    # Add permissions only if they don't exist
+    # Add permissions only if missing
     if '<uses-permission' not in content:
         new_content = content.replace(
             '<application',
@@ -24,14 +24,22 @@ if os.path.exists(manifest_path):
 
     print("Permissions added.")
 
-# 2. Upgrade Android SDK version to 34
+
+# 2. Upgrade Android SDK versions (Min, Target, and Compile)
 gradle_path = 'android/app/build.gradle'
 
 if os.path.exists(gradle_path):
     with open(gradle_path, 'r') as f:
         gradle_content = f.read()
 
-    # Replace any compileSdkVersion or targetSdkVersion with 34
+    # Set Min SDK to 21 (required by the record library)
+    gradle_content = re.sub(
+        r'minSdkVersion\s+\d+',
+        'minSdkVersion 21',
+        gradle_content
+    )
+
+    # Set Compile & Target SDK to 34
     gradle_content = re.sub(
         r'compileSdkVersion\s+\d+',
         'compileSdkVersion 34',
@@ -46,4 +54,4 @@ if os.path.exists(gradle_path):
     with open(gradle_path, 'w') as f:
         f.write(gradle_content)
 
-    print("SDK version upgraded to 34.")
+    print("SDK versions upgraded (Min: 21, Target: 34).")
