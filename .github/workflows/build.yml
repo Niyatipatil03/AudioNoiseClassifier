@@ -17,12 +17,12 @@ jobs:
 
       - name: Install AI Conversion Tools
         run: |
-            pip install --no-cache-dir typing_extensions==4.10.0
-            pip install --no-cache-dir torch==2.1.2 torchvision==0.16.2
-            pip install onnx==1.14.1
-            pip install tensorflow==2.13.0
-            pip install tensorflow-probability==0.21.0
-            pip install git+https://github.com/onnx/onnx-tensorflow.git
+          pip install --no-cache-dir typing_extensions==4.10.0
+          pip install --no-cache-dir torch==2.1.2 torchvision==0.16.2
+          pip install onnx==1.14.1
+          pip install tensorflow==2.13.0
+          pip install tensorflow-probability==0.21.0
+          pip install git+https://github.com/onnx/onnx-tensorflow.git
 
       - name: Convert Model to TFLite
         run: python convert_model.py
@@ -36,7 +36,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          flutter-version: '3.16.9'
 
       - name: Create Project and Assets
         run: |
@@ -47,7 +47,7 @@ jobs:
 
       - name: Add Permissions
         run: python add_perms.py
-        
+
       - name: Install Dependencies
         run: flutter pub get
 
