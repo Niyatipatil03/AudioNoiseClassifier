@@ -1,5 +1,4 @@
 name: Flutter Offline Build
-
 on: [push]
 
 jobs:
