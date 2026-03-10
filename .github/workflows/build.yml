@@ -46,9 +46,8 @@ jobs:
           mv model.tflite assets/model.tflite
 
       - name: Add Permissions
-        run: |
-          python3 -c "path = 'android/app/src/main/AndroidManifest.xml' with open(path, 'r') as f: content = f.read() perms = '    <uses-permission android:name=\"android.permission.RECORD_AUDIO\" />\n    <uses-permission android:name=\"android.permission.INTERNET\" />\n' new_content = content.replace('<application', perms + '    <application') with open(path, 'w') as f: f.write(new_content)"
-
+        run: python add_perms.py
+        
       - name: Install Dependencies
         run: flutter pub get
 
