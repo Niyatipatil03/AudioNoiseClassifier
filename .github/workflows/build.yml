@@ -25,7 +25,13 @@ jobs:
           pip install git+https://github.com/onnx/onnx-tensorflow.git
 
       - name: Convert Model to TFLite
-        run: python convert_model.py
+        run: |
+          python convert_model.py
+          # Check if the file was actually created
+          if [ ! -f "model.tflite" ]; then
+            echo "ERROR: model.tflite was not created!"
+            exit 1
+          fi
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
@@ -38,24 +44,27 @@ jobs:
         with:
           flutter-version: '3.16.9'
 
-      - name: Create Project Shell
+      - name: Build Project Structure
         run: |
-          # 1) Backup your custom files
-          cp pubspec.yaml pubspec.yaml.bak
-          cp lib/main.dart main.dart.bak
+          # 1. Backup your custom files
+          cp pubspec.yaml pubspec_backup.yaml
+          cp lib/main.dart main_backup.dart
 
-          # 2) Create/refresh Android structure
+          # 2. Recreate the Android shell
           rm -rf android
           flutter create --project-name=audio_noise_classifier --platforms=android .
 
-          # 3) Restore your custom files
-          mv pubspec.yaml.bak pubspec.yaml
+          # 3. Restore your custom files
+          mv pubspec_backup.yaml pubspec.yaml
           mkdir -p lib
-          mv main.dart.bak lib/main.dart
+          mv main_backup.dart lib/main.dart
 
-          # 4) Put the model in the assets folder
+          # 4. FORCE the model into the assets folder
           mkdir -p assets
           cp model.tflite assets/model.tflite
+
+          # 5. List files to verify (visible in logs)
+          ls -R assets/
 
       - name: Add Permissions & SDK Fix
         run: python add_perms.py
