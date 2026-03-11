@@ -40,17 +40,24 @@ jobs:
 
       - name: Create Project Shell
         run: |
+          # 1) Backup your custom files
+          cp pubspec.yaml pubspec.yaml.bak
+          cp lib/main.dart main.dart.bak
+
+          # 2) Create/refresh Android structure
           rm -rf android
           flutter create --project-name=audio_noise_classifier --platforms=android .
 
-          # Restore your original files
-          git checkout pubspec.yaml lib/main.dart
+          # 3) Restore your custom files
+          mv pubspec.yaml.bak pubspec.yaml
+          mkdir -p lib
+          mv main.dart.bak lib/main.dart
 
-          # Create assets folder and move the model
+          # 4) Put the model in the assets folder
           mkdir -p assets
           cp model.tflite assets/model.tflite
 
-      - name: Add Permissions
+      - name: Add Permissions & SDK Fix
         run: python add_perms.py
 
       - name: Build APK
