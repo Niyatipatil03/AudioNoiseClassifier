@@ -24,10 +24,10 @@ jobs:
           pip install tensorflow-probability==0.21.0
           pip install git+https://github.com/onnx/onnx-tensorflow.git
 
-      - name: Convert Model
+      - name: Convert Model to TFLite
         run: python convert_model.py
 
-      - name: Set up Java
+      - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
@@ -38,13 +38,16 @@ jobs:
         with:
           flutter-version: '3.16.9'
 
-      - name: Create Project
+      - name: Create Project Shell
         run: |
           rm -rf android
-          # Create fresh Flutter Android project
           flutter create --project-name=audio_noise_classifier --platforms=android .
+
+          # Restore your original files
+          git checkout pubspec.yaml lib/main.dart
+
+          # Create assets folder and move the model
           mkdir -p assets
-          # Move converted TFLite model into assets
           cp model.tflite assets/model.tflite
 
       - name: Add Permissions
