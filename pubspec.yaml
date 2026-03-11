@@ -1,5 +1,5 @@
 name: audio_noise_classifier
-description: Offline AI Noise Classifier.
+description: Offline AI Noise Classifier with History.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,15 +9,14 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
   tflite_flutter: ^0.10.1
-  
-  # Downgraded to version 5.0.5 to work with Flutter 3.16.9
-  record: 5.0.5
-
+  record: ^5.0.5
   path_provider: ^2.1.1
   permission_handler: ^11.0.1
   fftea: ^1.5.0
+  sqflite: ^2.3.0
+  path: ^1.8.3
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
